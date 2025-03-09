@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Ensures proper rendering on mobile devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Habit Tracker</title>
+  <style>
+    /* Dark mode variables */
+    :root[data-theme="light"] {
+      --bg-color: #f5f5f5;
+      --container-bg: white;
+      --text-color: #333;
+      --border-color: #ddd;
+      --header-color: #4a4a4a;
+      --table-header-bg: #f2f2f2;
+      --cell-bg: #eee;
+    }
+
+    :root[data-theme="dark"] {
+      --bg-color: #1a1a1a;
+      --container-bg: #2d2d2d;
+      --text-color: #e0e0e0;
+      --border-color: #404040;
+      --header-color: #ffffff;
+      --table-header-bg: #3d3d3d;
+      --cell-bg: #404040;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .container {
+      /* This max-width keeps the layout centered on desktops; 
+         it will shrink to fit smaller devices automatically. */
+      max-width: 1000px;
+      margin: 0 auto;
+      background-color: var(--container-bg);
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--header-color);
+      margin-bottom: 30px;
+    }
+
+    .tracker-controls {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      align-items: center;
+      /* By default on wide screens, everything is side-by-side. */
+    }
+
+    .add-habit-form {
+      display: flex;
+      gap: 10px;
+    }
+
+    input,
+    button {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 16px;
+      background-color: var(--container-bg);
+      color: var(--text-color);
+    }
+
+    button {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #3e8e41;
+    }
+
+    .delete-habit {
+      background-color: #f44336;
+      margin-left: 10px;
+    }
+
+    .tracker-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      overflow-x: auto;
+      display: block; /* Allows horizontal scroll if needed. */
+    }
+
+    .tracker-table th,
+    .tracker-table td {
+      border: 1px solid var(--border-color);
+      padding: 12px;
+      text-align: center;
+      background-color: var(--container-bg);
+    }
+
+    .tracker-table th {
+      background-color: var(--table-header-bg);
+    }
+
+    .habit-cell {
+      text-align: left;
+      font-weight: bold;
+      min-width: 200px;
+    }
+
+    .habit-status {
+      width: 30px;
+      height: 30px;
+      margin: 0 auto;
+      cursor: pointer;
+      border-radius: 4px;
+      background-color: var(--cell-bg);
+    }
+
+    .completed {
+      background-color: #4caf50;
+    }
+
+    .failed {
+      background-color: #f44336;
+    }
+
+    .sword-display {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sword {
+      width: 24px;
+      height: 24px;
+    }
+
+    .streak-count {
+      margin-left: 10px;
+      font-weight: bold;
+      color: #666;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background-color: var(--container-bg);
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      max-width: 500px;
+      position: relative;
+      color: var(--text-color);
+    }
+
+    .modal h2 {
+      margin-top: 0;
+      color: var(--header-color);
+    }
+
+    .large-sword {
+      width: 100px;
+      height: 100px;
+      margin: 20px auto;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 24px;
+      cursor: pointer;
+      color: #aaa;
+    }
+
+    .share-button {
+      background-color: #1da1f2;
+      margin-top: 20px;
+    }
+
+    .month-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .month-title {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    /* 
+     * MEDIA QUERY for smaller screens (e.g., phone).
+     * When screen width is 600px or below, stack controls
+     * and allow them to fit nicely in portrait view.
+     */
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+
+      .container {
+        padding: 10px;
+        margin: 0;
+        border-radius: 0;
+      }
+
+      .tracker-controls {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .add-habit-form {
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .add-habit-form input {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      .tracker-table {
+        font-size: 14px;
+      }
+
+      .habit-cell {
+        min-width: 150px;
+      }
+
+      .sword-display {
+        flex-wrap: wrap;
+      }
+
+      .delete-habit {
+        margin-top: 5px;
+        margin-left: 0;
+      }
+
+      .theme-toggle {
+        top: 10px;
+        right: 10px;
+      }
+    }
+
+    /* Theme toggle button styles */
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      background-color: var(--container-bg);
+      border: 2px solid var(--border-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .theme-toggle svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--text-color);
+    }
+  </style>
+</head>
+<body>
+  <!-- Add theme toggle button after body tag -->
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+    <svg viewBox="0 0 24 24" class="sun-icon">
+      <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
+    </svg>
+  </button>
+  <div class="container">
+    <h1>Habit Tracker</h1>
+
+    <div class="tracker-controls">
+      <div class="add-habit-form">
+        <input type="text" id="habitInput" placeholder="Enter a new habit" />
+        <button id="addHabitBtn">Add Habit</button>
+      </div>
+      <div class="month-nav">
+        <button id="prevMonth">←</button>
+        <span class="month-title" id="currentMonth"></span>
+        <button id="nextMonth">→</button>
+      </div>
+    </div>
+
+    <table class="tracker-table" id="trackerTable">
+      <!-- Table content will be generated by JavaScript -->
+    </table>
+  </div>
+
+  <div class="modal" id="achievementModal">
+    <div class="modal-content">
+      <span class="close-modal" id="closeModal">&times;</span>
+      <h2>Achievement Unlocked!</h2>
+      <p id="achievementText">You've maintained your habit for 21 days!</p>
+      <div id="swordDisplay" class="large-sword"></div>
+      <button class="share-button" id="shareBtn">Share Achievement!</button>
+    </div>
+  </div>
+
+  <script>
+    // Initialize state
+    let habits = JSON.parse(localStorage.getItem('habits')) || [];
+    let currentDate = new Date();
+    let currentMonth = currentDate.getMonth();
+    let currentYear = currentDate.getFullYear();
+
+    // DOM elements
+    const habitInput = document.getElementById('habitInput');
+    const addHabitBtn = document.getElementById('addHabitBtn');
+    const trackerTable = document.getElementById('trackerTable');
+    const prevMonthBtn = document.getElementById('prevMonth');
+    const nextMonthBtn = document.getElementById('nextMonth');
+    const currentMonthDisplay = document.getElementById('currentMonth');
+    const achievementModal = document.getElementById('achievementModal');
+    const closeModalBtn = document.getElementById('closeModal');
+    const achievementText = document.getElementById('achievementText');
+    const swordDisplay = document.getElementById('swordDisplay');
+    const shareBtn = document.getElementById('shareBtn');
+
+    // Sword definitions with pixel art representations
+    const swords = {
+      none: `
+        <svg width="24" height="24" viewBox="0 0 24 24">
+          <!-- Empty sword -->
+        </svg>
+      `,
+      wood: `
+        <svg width="24" height="24" viewBox="0 0 24 24">
+          <!-- Wood sword -->
+          <rect x="11" y="4" width="2" height="12" fill="#8B4513"/>
+          <rect x="7" y="16" width="10" height="2" fill="#8B4513"/>
+        </svg>
+      `,
+      stone: `
+        <svg width="24" height="24" viewBox="0 0 24 24">
+          <!-- Stone sword -->
+          <rect x="11" y="4" width="2" height="12" fill="#A9A9A9"/>
+          <rect x="7" y="16" width="10" height="2" fill="#A9A9A9"/>
+        </svg>
+      `,
+      iron: `
+        <svg width="24" height="24" viewBox="0 0 24 24">
+          <!-- Iron sword -->
+          <rect x="11" y="4" width="2" height="12" fill="#C0C0C0"/>
+          <rect x="7" y="16" width="10" height="2" fill="#C0C0C0"/>
+        </svg>
+      `,
+      gold: `
+        <svg width="24" height="24" viewBox="0 0 24 24">
+          <!-- Gold sword -->
+          <rect x="11" y="4" width="2" height="12" fill="#FFD700"/>
+          <rect x="7" y="16" width="10" height="2" fill="#FFD700"/>
+        </svg>
+      `,
+      diamond: `
+        <svg width="24" height="24" viewBox="0 0 24 24">
+          <!-- Diamond sword -->
+          <rect x="11" y="4" width="2" height="12" fill="#B9F2FF"/>
+          <rect x="7" y="16" width="10" height="2" fill="#B9F2FF"/>
+        </svg>
+      `,
+    };
+
+    // Create a larger sword for the achievement modal
+    const createLargeSword = (type) => {
+      return `
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <!-- ${type} sword -->
+          <rect x="45" y="10" width="10" height="60" fill="${getSwordColor(type)}"/>
+          <rect x="25" y="70" width="50" height="10" fill="${getSwordColor(type)}"/>
+        </svg>
+      `;
+    };
+
+    function getSwordColor(type) {
+      const colors = {
+        wood: "#8B4513",
+        stone: "#A9A9A9",
+        iron: "#C0C0C0",
+        gold: "#FFD700",
+        diamond: "#B9F2FF",
+      };
+      return colors[type] || "#000000";
+    }
+
+    // Initialize
+    function init() {
+      renderTable();
+      updateMonthDisplay();
+      initTheme();
+    }
+
+    // Initialize theme
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeIcon(savedTheme);
+    }
+
+    // Toggle theme
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeIcon(newTheme);
+    }
+
+    // Update theme icon
+    function updateThemeIcon(theme) {
+      const themeToggle = document.getElementById('themeToggle');
+      if (theme === 'dark') {
+        themeToggle.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clip-rule="evenodd" />
+          </svg>
+        `;
+      } else {
+        themeToggle.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
+          </svg>
+        `;
+      }
+    }
+
+    // Add theme toggle event listener
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+    // Get the days in a month
+    function getDaysInMonth(month, year) {
+      return new Date(year, month + 1, 0).getDate();
+    }
+
+    // Format a date as YYYY-MM-DD
+    function formatDate(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+        date.getDate()
+      ).padStart(2, '0')}`;
+    }
+
+    // Update month display
+    function updateMonthDisplay() {
+      const months = [
+        "January","February","March","April","May","June",
+        "July","August","September","October","November","December"
+      ];
+      currentMonthDisplay.textContent = `${months[currentMonth]} ${currentYear}`;
+    }
+
+    // Render the tracker table
+    function renderTable() {
+      trackerTable.innerHTML = "";
+
+      // Get days in the selected month
+      const daysInMonth = getDaysInMonth(currentMonth, currentYear);
+
+      // Create table header
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+
+      // Add empty cell for the habit column
+      const habitHeaderCell = document.createElement("th");
+      habitHeaderCell.classList.add("habit-cell");
+      habitHeaderCell.textContent = "Habits";
+      headerRow.appendChild(habitHeaderCell);
+
+      // Add cells for each day of the month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const th = document.createElement("th");
+        th.textContent = day;
+        headerRow.appendChild(th);
+      }
+
+      thead.appendChild(headerRow);
+      trackerTable.appendChild(thead);
+
+      // Create table body
+      const tbody = document.createElement("tbody");
+
+      // Add row for each habit
+      habits.forEach((habit, habitIndex) => {
+        const row = document.createElement("tr");
+
+        // Habit name cell with streak, sword, and delete button
+        const habitCell = document.createElement("td");
+        habitCell.classList.add("habit-cell");
+
+        const habitDiv = document.createElement("div");
+        habitDiv.classList.add("sword-display");
+
+        const habitName = document.createElement("span");
+        habitName.textContent = habit.name;
+
+        const swordElement = document.createElement("span");
+        swordElement.classList.add("sword");
+        swordElement.innerHTML = getSwordSVG(habit.currentStreak);
+
+        const streakElement = document.createElement("span");
+        streakElement.classList.add("streak-count");
+        streakElement.textContent = `${habit.currentStreak} days`;
+
+        // Delete button for removing a habit
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.classList.add("delete-habit");
+        deleteBtn.addEventListener("click", () => {
+          if (confirm("Are you sure you want to delete this habit?")) {
+            habits.splice(habitIndex, 1);
+            saveHabits();
+            renderTable();
+          }
+        });
+
+        habitDiv.appendChild(swordElement);
+        habitDiv.appendChild(habitName);
+        habitDiv.appendChild(streakElement);
+        habitDiv.appendChild(deleteBtn);
+
+        habitCell.appendChild(habitDiv);
+        row.appendChild(habitCell);
+
+        // Add cells for each day of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+          const cell = document.createElement("td");
+
+          // Create date string for this cell
+          const dateObj = new Date(currentYear, currentMonth, day);
+          const dateString = formatDate(dateObj);
+
+          // Check if this date is in the future
+          const isInFuture = dateObj > new Date();
+
+          // Create status cell
+          const statusCell = document.createElement("div");
+          statusCell.classList.add("habit-status");
+          statusCell.dataset.habit = habitIndex;
+          statusCell.dataset.date = dateString;
+
+          // Set cell status based on habit logs
+          if (!isInFuture) {
+            const status = habit.logs[dateString];
+            if (status === true) {
+              statusCell.classList.add("completed");
+            } else if (status === false) {
+              statusCell.classList.add("failed");
+            }
+
+            // Add click event listener
+            statusCell.addEventListener("click", () =>
+              toggleHabitStatus(habitIndex, dateString)
+            );
+          } else {
+            // Disable future dates
+            statusCell.style.cursor = "not-allowed";
+            statusCell.style.opacity = "0.3";
+          }
+
+          cell.appendChild(statusCell);
+          row.appendChild(cell);
+        }
+
+        tbody.appendChild(row);
+      });
+
+      trackerTable.appendChild(tbody);
+    }
+
+    // Get appropriate sword SVG based on streak count
+    function getSwordSVG(streak) {
+      if (streak < 21) {
+        return swords.none;
+      } else if (streak < 51) {
+        return swords.wood;
+      } else if (streak < 81) {
+        return swords.stone;
+      } else if (streak < 111) {
+        return swords.iron;
+      } else if (streak < 183) {
+        return swords.gold;
+      } else {
+        return swords.diamond;
+      }
+    }
+
+    // Get sword type based on streak
+    function getSwordType(streak) {
+      if (streak < 21) {
+        return "none";
+      } else if (streak < 51) {
+        return "wood";
+      } else if (streak < 81) {
+        return "stone";
+      } else if (streak < 111) {
+        return "iron";
+      } else if (streak < 183) {
+        return "gold";
+      } else {
+        return "diamond";
+      }
+    }
+
+    // Toggle habit status for a specific date
+    function toggleHabitStatus(habitIndex, dateString) {
+      const habit = habits[habitIndex];
+
+      // Get the current status (undefined, true, or false)
+      const currentStatus = habit.logs[dateString];
+
+      // Toggle between states: undefined -> completed -> failed -> undefined
+      let newStatus;
+      if (currentStatus === undefined) {
+        newStatus = true; // Mark as completed
+      } else if (currentStatus === true) {
+        newStatus = false; // Mark as failed
+      } else {
+        newStatus = undefined; // Reset to undefined
+      }
+
+      // Update the habit log
+      habit.logs[dateString] = newStatus;
+
+      // Recalculate streak
+      recalculateStreak(habitIndex);
+
+      // Save to localStorage and re-render
+      saveHabits();
+      renderTable();
+    }
+
+    // Recalculate streak for a habit
+    function recalculateStreak(habitIndex) {
+      const habit = habits[habitIndex];
+      let currentStreak = 0;
+
+      // Get today's date and previous dates
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Find the latest entry date
+      let latestEntryDate = null;
+      for (const dateString in habit.logs) {
+        const status = habit.logs[dateString];
+        if (status !== undefined) {
+          const dateObj = new Date(dateString);
+          if (!latestEntryDate || dateObj > latestEntryDate) {
+            latestEntryDate = dateObj;
+          }
+        }
+      }
+
+      // If there's no entry, streak is 0
+      if (!latestEntryDate) {
+        habit.currentStreak = 0;
+        return;
+      }
+
+      // Calculate streak by going backward from the latest entry date
+      let checkDate = new Date(latestEntryDate);
+      const oldSwordType = getSwordType(habit.currentStreak);
+
+      while (true) {
+        const dateString = formatDate(checkDate);
+        const status = habit.logs[dateString];
+
+        // Break if failed or no entry for a day (except for future dates)
+        if (status === false || (status === undefined && checkDate <= today)) {
+          break;
+        }
+
+        // Only count completed days
+        if (status === true) {
+          currentStreak++;
+        }
+
+        // Go to previous day
+        checkDate.setDate(checkDate.getDate() - 1);
+      }
+
+      // Update the streak
+      habit.currentStreak = currentStreak;
+
+      // Check for sword upgrade
+      const newSwordType = getSwordType(currentStreak);
+      if (newSwordType !== "none" && newSwordType !== oldSwordType && currentStreak >= 21) {
+        // Show achievement modal
+        showAchievement(newSwordType, currentStreak, habit.name);
+      }
+    }
+
+    // Show achievement modal
+    function showAchievement(swordType, streak, habitName) {
+      achievementText.textContent = `Congratulations! You've maintained "${habitName}" for ${streak} days and earned a ${swordType} sword!`;
+      swordDisplay.innerHTML = createLargeSword(swordType);
+      achievementModal.style.display = "flex";
+    }
+
+    // Save habits to localStorage
+    function saveHabits() {
+      localStorage.setItem("habits", JSON.stringify(habits));
+    }
+
+    // Add a new habit
+    function addNewHabit() {
+      const habitName = habitInput.value.trim();
+
+      if (habitName) {
+        const newHabit = {
+          name: habitName,
+          logs: {},
+          currentStreak: 0,
+        };
+
+        habits.push(newHabit);
+        saveHabits();
+        renderTable();
+
+        // Clear input
+        habitInput.value = "";
+      }
+    }
+
+    // Event listeners
+    addHabitBtn.addEventListener("click", addNewHabit);
+
+    habitInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        addNewHabit();
+      }
+    });
+
+    prevMonthBtn.addEventListener("click", () => {
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      }
+      updateMonthDisplay();
+      renderTable();
+    });
+
+    nextMonthBtn.addEventListener("click", () => {
+      currentMonth++;
+      if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      updateMonthDisplay();
+      renderTable();
+    });
+
+    closeModalBtn.addEventListener("click", () => {
+      achievementModal.style.display = "none";
+    });
+
+    shareBtn.addEventListener("click", () => {
+      // In a real app, you would implement social sharing here
+      alert("Share feature would be implemented here with social media sharing APIs.");
+
+      // For now, just close the modal
+      achievementModal.style.display = "none";
+    });
+
+    // Initialize the app
+    init();
+  </script>
+</body>
+</html>
